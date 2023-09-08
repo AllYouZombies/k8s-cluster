@@ -105,3 +105,62 @@ I recommend you to follow the [official documentation](https://docs.cilium.io/en
 > It might be one of the addressess you specified in the `--apiserver-cert-extra-sans` flag.
 
 ---
+
+## Install load balancer
+
+Download the manifest file.
+```shell
+curl -s https://raw.githubusercontent.com/metallb/metallb/v0.13.11/config/manifests/metallb-native.yaml -o metallb-native.yaml
+```
+
+Apply the manifest file.
+```shell
+kubectl apply -f metallb-native.yaml
+```
+
+Wait for the pods to be ready.
+```shell
+kubectl get pods -n metallb-system -w
+```
+
+Create an `IPAddressPool` and an `L2Advertisement` to configure the load balancer.
+```shell
+cat <<EOF | tee metallb-ips.yaml
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: first-pool
+  namespace: metallb-system
+spec:
+  addresses:
+    # You can specify a range of external IPs or any number of single IPs with /32 subnet mask.
+    # The IPs must be in the same subnet as the nodes.
+    - 192.168.100.11/32
+    - 192.168.0.0/16
+    - 192.168.100.11-192.168.100.200
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: default
+  namespace: metallb-system
+EOF
+```
+
+Apply the configuration.
+```shell
+kubectl apply -f metallb-ips.yaml
+```
+
+---
+
+## Install ingress controller
+
+
+---
+
+## Add persistent storage
+
+
+---
+
