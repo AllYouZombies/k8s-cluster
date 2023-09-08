@@ -91,10 +91,11 @@ You may need to join other nodes to the cluster and download the kubeconfig file
 > All the steps below are **just my personal preferences**.
 
 What I'm going to do:
-- Install a pod network add-on: [Cilium](https://cilium.io/).
-- Install a load balancer: [MetalLB](https://metallb.universe.tf/).
-- Install a service mesh & ingress controller: [Istio](https://istio.io/).
-- Add persistent storage: [Ceph](https://itnext.io/deploy-ceph-integrate-with-kubernetes-9f88097e605), [Official site](https://ceph.io/).
+- Install a pod network add-on: [Cilium](https://cilium.io/)
+- Install a load balancer: [MetalLB](https://metallb.universe.tf/)
+- Install a service mesh & ingress controller: [Istio](https://istio.io/)
+- Install a cert-manager & integrate it with Istio: [Cert-manager](https://cert-manager.io/), [Istio docs](https://istio.io/latest/docs/ops/integrations/certmanager/)
+- Add persistent storage: [Ceph](https://ceph.io/), [Kubernetes integration](https://itnext.io/deploy-ceph-integrate-with-kubernetes-9f88097e605)
 
 ---
 
@@ -160,8 +161,13 @@ kubectl apply -f metallb-ips.yaml
 
 ---
 
-## Install ingress controller
+## Install cert-manager
 
+---
+
+## Install Istio service mesh & ingress controller
+
+### Integrate Istio with cert-manager
 
 ---
 
