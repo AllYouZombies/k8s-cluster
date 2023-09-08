@@ -71,17 +71,18 @@ ansible-playbook playbook.yml -b
 
 #### API server advertise address
 
-In some cases, you may need to add the `--apiserver-advertise-address` and `--apiserver-cert-extra-sans` flags to the `kubeadm init` command.
+In some cases, you may need to add the `--apiserver-advertise-address` and `--apiserver-cert-extra-sans` flags to the `kubeadm init` command.  
+It depends on your network configuration.  
+In my case, without these flags, the API server was not accessible from pods.  
 
-For example:
-
+Example:
 ```shell
 kubeadm init --apiserver-advertise-address=0.0.0.0 --apiserver-cert-extra-sans=<CURRENT_NODE_EXTERNAL_IP>,<CURRENT_NODE_INTERNAL_IP>,api-server.<CLUSTER_DOMAIN>
 ```
   
-> After the cluster is initialized, refer to the 
-> [next section of the official documentation](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/#more-information).  
-> You may need to join other nodes to the cluster and download the kubeconfig file.
+After the cluster is initialized, refer to the 
+[next section of the official documentation](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/#more-information).  
+You may need to join other nodes to the cluster and download the kubeconfig file.
 
 ---
 
