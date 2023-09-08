@@ -4,6 +4,13 @@
   become: yes
   tasks:
 
+    - name: Check if the system is updated
+      stat:
+        path: /var/lib/apt/periodic/update-success-stamp
+      register: system_updated
+      changed_when: false
+      failed_when: false
+
     - name: Update the system
       apt:
         update_cache: yes
@@ -12,6 +19,7 @@
         force_apt_get: yes
         autoremove: yes
         autoclean: yes
+      when: not system_updated.stat.exists
 
     - name: Set the timezone
       timezone:
@@ -39,6 +47,24 @@
         line: "127.0.0.1 localhost {{ inventory_hostname }}.{{ domain }}"
         state: present
 
+    - name: Check if overlay module is loaded
+      command: lsmod | grep -q overlay
+      register: modules_loaded_overlay
+      changed_when: false
+      failed_when: false
+
+    - name: Check if br_netfilter module is loaded
+      command: lsmod | grep -q br_netfilter
+      register: modules_loaded_br_netfilter
+      changed_when: false
+      failed_when: false
+
+    - name: Check sysctl parameters
+      command: sysctl -a
+      register: sysctl_params
+      changed_when: false
+      failed_when: false
+
     - name: Add overlay and br_netfilter to /etc/modules-load.d/k8s.conf
       blockinfile:
         path: /etc/modules-load.d/k8s.conf
@@ -47,6 +73,7 @@
           br_netfilter
         state: present
         create: yes
+      when: not (modules_loaded_overlay.rc or modules_loaded_br_netfilter.rc)
 
     - name: Add sysctl params to /etc/sysctl.d/k8s.conf
       blockinfile:
@@ -57,28 +84,40 @@
           net.ipv4.ip_forward                 = 1
         state: present
         create: yes
+      when: not ('bridge-nf-call-iptables = 1' in sysctl_params.stdout or
+                 'bridge-nf-call-ip6tables = 1' in sysctl_params.stdout or
+                 'net.ipv4.ip_forward = 1' in sysctl_params.stdout)
 
     - name: Load kernel modules
-      shell: |
-        modprobe overlay
-        modprobe br_netfilter
+      shell: modprobe overlay br_netfilter && sysctl --system
+      when: not (modules_loaded_overlay.rc or modules_loaded_br_netfilter.rc or not sysctl_params.rc)
 
-        sysctl --system
+    - name: Check if containerd is installed
+      stat:
+        path: /usr/local/bin/containerd
+      register: containerd_installed
+      changed_when: false
+      failed_when: false
 
-    - name: Download containerd
-      get_url:
-        url: "{{ containerd_download_url }}"
-        dest: /tmp/
-        timeout: 60
-        mode: 0755
-      register: containerd_download_result
+    - name: Containerd installation block
+      block:
+        - name: Download containerd
+          get_url:
+            url: "{{ containerd_download_url }}"
+            dest: $HOME
+            timeout: 60
+            mode: 0755
+          register: containerd_download_result
+          changed_when: false
+          failed_when: false
 
-    - name: Extract containerd to /usr/local/bin/
-      unarchive:
-        src: "{{ containerd_download_result.dest }}"
-        dest: /usr/local/
-        remote_src: yes
-        creates: /usr/local/bin/containerd
+        - name: Extract containerd to /usr/local/bin/
+          unarchive:
+            src: /tmp/containerd.tar.gz
+            dest: /usr/local/
+            remote_src: yes
+            creates: /usr/local/bin/containerd
+      when: not containerd_installed.stat.exists
 
     - name: Create containerd config directory
       file:
@@ -86,34 +125,73 @@
         state: directory
         mode: 0755
 
+    - name: Check if containerd config file exists
+      stat:
+        path: /etc/containerd/config.toml
+      register: containerd_config_exists
+      changed_when: false
+      failed_when: false
+
     - name: Create containerd config file
       shell: |
         containerd config default > /etc/containerd/config.toml
+      args:
+        creates: /etc/containerd/config.toml
+      when: not containerd_config_exists.stat.exists
+
+    - name: Check if SystemdCgroup is enabled in containerd config file
+      command: cat /etc/containerd/config.toml | grep 'SystemdCgroup = true'
+      register: containerd_systemd_cgroup_enabled
+      changed_when: false
+      failed_when: false
 
     - name: Enable SystemdCgroup in containerd config file
       replace:
         path: /etc/containerd/config.toml
         regexp: 'SystemdCgroup = false'
         replace: 'SystemdCgroup = true'
+      when: not containerd_systemd_cgroup_enabled.rc
+
+    - name: Check if pause image is set in containerd config file
+      command: cat /etc/containerd/config.toml | grep 'sandbox_image = "registry.k8s.io/pause:3.9"'
+      register: containerd_pause_image_changed
+      changed_when: false
+      failed_when: false
 
     - name: Set the default pause image to registry.k8s.io
       replace:
         path: /etc/containerd/config.toml
         regexp: 'sandbox_image = .*$'
         replace: 'sandbox_image = "registry.k8s.io/pause:3.9"'
+      when: not containerd_pause_image_changed.rc
+
+    - name: Check if containerd service file is downloaded
+      stat:
+        path: /etc/systemd/system/containerd.service
+      register: containerd_service_file_download
+      changed_when: false
+      failed_when: false
 
     - name: Download containerd service file
       get_url:
         url: https://raw.githubusercontent.com/containerd/cri/master/contrib/systemd-units/containerd.service
         dest: /etc/systemd/system/containerd.service
         mode: 0644
+      when: not containerd_service_file_download.stat.exists
 
-    - name: (Re)start & enable containerd
+    - name: Start & enable containerd
       systemd:
         name: containerd
-        state: restarted
+        state: started
         enabled: yes
         daemon_reload: yes
+
+    - name: Check if runc is installed
+      stat:
+        path: /usr/local/bin/runc
+      register: runc_installed
+      changed_when: false
+      failed_when: false
 
     - name: Download and install runc
       get_url:
@@ -121,6 +199,14 @@
         dest: /usr/local/bin/runc
         timeout: 60
         mode: 0755
+      when: not runc_installed.stat.exists
+
+    - name: Check if CNI plugins are downloaded
+      stat:
+        path: /opt/cni/bin/bridge
+      register: cni_plugins_installed
+      changed_when: false
+      failed_when: false
 
     - name: Download CNI plugins
       get_url:
@@ -128,13 +214,14 @@
         dest: /tmp/
         timeout: 60
         mode: 0755
-      register: cni_plugins_download_result
+      when: not cni_plugins_installed.stat.exists
 
     - name: Create CNI plugins directory
       file:
         path: /opt/cni/bin
         state: directory
         mode: 0755
+      when: not cni_plugins_installed.stat.exists
 
     - name: Extract CNI plugins to /opt/cni/bin
       unarchive:
@@ -142,6 +229,7 @@
         dest: /opt/cni/bin
         remote_src: yes
         creates: /opt/cni/bin/bridge
+      when: not cni_plugins_installed.stat.exists
 
     - name: Install packages needed to use the Kubernetes apt repository
       apt:
@@ -151,10 +239,18 @@
         state: latest
         update_cache: yes
 
+    - name: Check if Kubernetes apt keyring is downloaded
+      stat:
+        path: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      register: k8s_apt_keyring_installed
+      changed_when: false
+      failed_when: false
+
     - name: Download the public signing key for the Kubernetes package repositories
       shell: |
         rm -rf /etc/apt/keyrings/kubernetes-apt-keyring.gpg
         curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      when: not k8s_apt_keyring_installed.stat.exists
 
     - name: Add the Kubernetes apt repository
       apt_repository:
