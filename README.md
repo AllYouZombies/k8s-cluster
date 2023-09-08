@@ -94,7 +94,7 @@ What I'm going to do:
 - Install a pod network add-on: [Cilium](https://cilium.io/)
 - Install a load balancer: [MetalLB](https://metallb.universe.tf/)
 - Install a service mesh & ingress controller: [Istio](https://istio.io/)
-- Install a cert-manager & integrate it with Istio: [Cert-manager](https://cert-manager.io/), [Istio docs](https://istio.io/latest/docs/ops/integrations/certmanager/)
+- Install a cert-manager & integrate Istio with it: [Cert-manager](https://cert-manager.io/), [Istio docs](https://istio.io/latest/docs/ops/integrations/certmanager/)
 - Add persistent storage: [Ceph](https://ceph.io/), [Kubernetes integration](https://itnext.io/deploy-ceph-integrate-with-kubernetes-9f88097e605)
 
 ---
