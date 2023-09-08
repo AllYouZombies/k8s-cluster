@@ -36,7 +36,7 @@ pip install ansible
 ### Create the inventory file
 
 ```shell
-cp inventory/example-hosts.yml inventory/hosts.yml
+cp -R example_cluster cluster
 ```
 
 Now edit the inventory file and replace the example values with your own.
