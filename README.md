@@ -93,8 +93,8 @@ You may need to join other nodes to the cluster and download the kubeconfig file
 What I'm going to do:
 - Install a pod network add-on: [Cilium](https://cilium.io/)
 - Install a load balancer: [MetalLB](https://metallb.universe.tf/)
+- Install cert-manager: [Cert-manager](https://cert-manager.io/)
 - Install a service mesh & ingress controller: [Istio](https://istio.io/)
-- Install a cert-manager & integrate Istio with it: [Cert-manager](https://cert-manager.io/), [Istio docs](https://istio.io/latest/docs/ops/integrations/certmanager/)
 - Add persistent storage: [Ceph](https://ceph.io/), [Kubernetes integration](https://itnext.io/deploy-ceph-integrate-with-kubernetes-9f88097e605)
 
 ---
@@ -163,11 +163,44 @@ kubectl apply -f metallb-ips.yaml
 
 ## Install cert-manager
 
+Refer to the [official documentation](https://cert-manager.io/docs/installation/kubernetes/) to get more information
+about the installation process.
+
+```shell
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.12.0/cert-manager.yaml
+```
+
 ---
 
 ## Install Istio service mesh & ingress controller
 
+Refer to the [official documentation](https://istio.io/latest/docs/setup/getting-started/) to get more information about the installation process.
+
+### Download Istio CLI
+
+MacOS:
+```shell
+brew install istioctl # macOS only
+```
+
+Linux:
+```shell
+curl -L https://istio.io/downloadIstio | sh -
+cd istio-* # go to the Istio directory
+export PATH=$PWD/bin:$PATH # add the istioctl client to your PATH
+```
+
+### Install Istio
+
+```shell
+istioctl install --set profile=minimal -y
+kubectl label namespace default istio-injection=enabled
+```
+
 ### Integrate Istio with cert-manager
+
+Refer to Istio [documentation](https://istio.io/latest/docs/ops/integrations/certmanager/)
+to get more information about the integration process.
 
 ---
 
