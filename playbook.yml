@@ -113,7 +113,7 @@
 
         - name: Extract containerd to /usr/local/bin/
           unarchive:
-            src: /tmp/containerd.tar.gz
+            src: "{{ containerd_download_result.dest }}"
             dest: /usr/local/
             remote_src: yes
             creates: /usr/local/bin/containerd
