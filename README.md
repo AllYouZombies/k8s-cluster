@@ -147,3 +147,8 @@ kubectl apply -n cert-manager -f kubernetes/cert-manager-issuers.yaml
 ```shell
 kubectl apply -f kubernetes/ingress-nginx.yaml
 ```
+
+> **NOTE:** As I don't have a load balancer, I'm using the `hostNetwork: true` option.  
+> Instead of `Deployment` I'm using `DaemonSet` to run the ingress controller on all the nodes.
+
+---
