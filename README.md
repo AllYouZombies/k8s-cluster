@@ -92,10 +92,9 @@ You may need to join other nodes to the cluster and download the kubeconfig file
 
 What I'm going to do:
 - Install a pod network add-on: [Cilium](https://cilium.io/)
-- Install a load balancer: [MetalLB](https://metallb.universe.tf/)
-- Install cert-manager: [Cert-manager](https://cert-manager.io/)
-- Install a service mesh & ingress controller: [Istio](https://istio.io/)
 - Add persistent storage: [Ceph](https://ceph.io/), [Kubernetes integration](https://itnext.io/deploy-ceph-integrate-with-kubernetes-9f88097e605)
+- Install cert-manager: [Cert-manager](https://cert-manager.io/)
+- Install an ingress controller: [Ingress-nginx](https://kubernetes.github.io/ingress-nginx/)
 
 ---
 
@@ -113,51 +112,11 @@ I recommend you to follow the [official documentation](https://docs.cilium.io/en
 
 ---
 
-## Install load balancer
+## Add persistent storage
 
-Download the manifest file.
-```shell
-curl -s https://raw.githubusercontent.com/metallb/metallb/v0.13.11/config/manifests/metallb-native.yaml -o metallb-native.yaml
-```
-
-Apply the manifest file.
-```shell
-kubectl apply -f metallb-native.yaml
-```
-
-Wait for the pods to be ready.
-```shell
-kubectl get pods -n metallb-system -w
-```
-
-Create an `IPAddressPool` and an `L2Advertisement` to configure the load balancer.
-```shell
-cat <<EOF | tee metallb-ips.yaml
-apiVersion: metallb.io/v1beta1
-kind: IPAddressPool
-metadata:
-  name: first-pool
-  namespace: metallb-system
-spec:
-  addresses:
-    # You can specify a range of external IPs or any number of single IPs with /32 subnet mask.
-    # The IPs must be in the same subnet as the nodes.
-    - 192.168.100.11/32
-    - 192.168.0.0/16
-    - 192.168.100.11-192.168.100.200
----
-apiVersion: metallb.io/v1beta1
-kind: L2Advertisement
-metadata:
-  name: default
-  namespace: metallb-system
-EOF
-```
-
-Apply the configuration.
-```shell
-kubectl apply -f metallb-ips.yaml
-```
+I decided to use [Ceph](https://ceph.io/) as the persistent storage for the cluster.
+Because of deploying Ceph cluster is out of the scope of this manual,
+please refer to [this article](https://gitlab.anttek.io/devops/ceph-cluster-for-k8s).
 
 ---
 
@@ -170,42 +129,21 @@ about the installation process.
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.12.0/cert-manager.yaml
 ```
 
----
+There is an example of the `cert-manager-issuers.yaml` file in the `kubernetes` directory.  
+There are two [ClusterIssuers](https://cert-manager.io/docs/concepts/issuer/) in the file:
+- `letsencrypt-prod` - for production
+- `letsencrypt-staging` - for testing
 
-## Install Istio service mesh & ingress controller
-
-Refer to the [official documentation](https://istio.io/latest/docs/setup/getting-started/) to get more information about the installation process.
-
-### Download Istio CLI
-
-MacOS:
-```shell
-brew install istioctl # macOS only
-```
-
-Linux:
-```shell
-curl -L https://istio.io/downloadIstio | sh -
-cd istio-* # go to the Istio directory
-export PATH=$PWD/bin:$PATH # add the istioctl client to your PATH
-```
-
-### Install Istio
+Update the `kubernetes/cert-manager-issuers.yaml` file with your email address and apply it to the cluster.
 
 ```shell
-istioctl install --set profile=minimal -y
-kubectl label namespace default istio-injection=enabled
+kubectl apply -n cert-manager -f kubernetes/cert-manager-issuers.yaml
 ```
-
-### Integrate Istio with cert-manager
-
-Refer to Istio [documentation](https://istio.io/latest/docs/ops/integrations/certmanager/)
-to get more information about the integration process.
 
 ---
 
-## Add persistent storage
+## Install an ingress controller
 
-
----
-
+```shell
+kubectl apply -f kubernetes/ingress-nginx.yaml
+```

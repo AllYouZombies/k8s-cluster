@@ -47,18 +47,6 @@
         line: "127.0.0.1 localhost {{ inventory_hostname }}.{{ domain }}"
         state: present
 
-    - name: Check if overlay module is loaded
-      command: lsmod | grep -q overlay
-      register: modules_loaded_overlay
-      changed_when: false
-      failed_when: false
-
-    - name: Check if br_netfilter module is loaded
-      command: lsmod | grep -q br_netfilter
-      register: modules_loaded_br_netfilter
-      changed_when: false
-      failed_when: false
-
     - name: Check sysctl parameters
       command: sysctl -a
       register: sysctl_params
@@ -73,7 +61,6 @@
           br_netfilter
         state: present
         create: yes
-      when: not (modules_loaded_overlay.rc or modules_loaded_br_netfilter.rc)
 
     - name: Add sysctl params to /etc/sysctl.d/k8s.conf
       blockinfile:
