@@ -1,5 +1,5 @@
 ---
-- hosts: kube_node
+- hosts: k8s_cluster
   name: Prepare the system
   become: yes
   tasks:

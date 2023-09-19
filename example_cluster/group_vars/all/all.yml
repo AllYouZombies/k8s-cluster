@@ -1,5 +1,5 @@
 timezone: "UTC"
-domain: ""
+domain: "" # Required
 containerd_download_url: "https://github.com/containerd/containerd/releases/download/v1.7.5/containerd-1.7.5-linux-amd64.tar.gz"
 runc_download_url: "https://github.com/opencontainers/runc/releases/download/v1.1.9/runc.amd64"
 cni_plugins_download_url: "https://github.com/containernetworking/plugins/releases/download/v1.3.0/cni-plugins-linux-amd64-v1.3.0.tgz"
